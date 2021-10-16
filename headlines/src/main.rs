@@ -1,14 +1,11 @@
 mod headlines;
 
-use eframe::{
-    egui::{
-        CentralPanel, CtxRef, Hyperlink, Label, ScrollArea, Separator, TextStyle, TopBottomPanel,
-        Ui, Vec2,
-    },
-    epi::App,
-    run_native, NativeOptions,
-};
+use eframe::{NativeOptions, egui::{CentralPanel, CtxRef, Hyperlink, Label, ScrollArea, Separator, TextStyle, TopBottomPanel, Ui, Vec2, Visuals}, epi::App, run_native};
 use headlines::{Headlines, PADDING};
+
+fn fetch_news() {
+    
+}
 
 impl App for Headlines {
     fn setup(
@@ -20,14 +17,25 @@ impl App for Headlines {
         self.configure_fonts(ctx);
     }
     fn update(&mut self, ctx: &eframe::egui::CtxRef, frame: &mut eframe::epi::Frame<'_>) {
-        self.render_top_panel(ctx);
-        CentralPanel::default().show(ctx, |ui| {
-            render_header(ui);
-            ScrollArea::auto_sized().show(ui, |ui| {
-                self.render_news_cards(ui);
+
+        if self.config.dark_mode {
+            ctx.set_visuals(Visuals::dark());
+        } else {
+            ctx.set_visuals(Visuals::light());
+        }
+        
+        if !self.api_key_initialized {
+            self.render_config(ctx);
+        } else {
+            self.render_top_panel(ctx, frame);
+            CentralPanel::default().show(ctx, |ui| {
+                render_header(ui);
+                ScrollArea::auto_sized().show(ui, |ui| {
+                    self.render_news_cards(ui);
+                });
+                render_footer(ctx);
             });
-            render_footer(ctx);
-        });
+        }
     }
 
     fn name(&self) -> &str {
@@ -65,6 +73,8 @@ fn render_header(ui: &mut Ui) {
 }
 
 fn main() {
+    tracing_subscriber::fmt::init();
+
     let app = Headlines::new();
     let mut win_option = NativeOptions::default();
     win_option.initial_window_size = Some(Vec2::new(540., 960.));
