@@ -1,8 +1,18 @@
 mod headlines;
 
-use std::{sync::mpsc::{channel, sync_channel}, thread};
+use std::{
+    sync::mpsc::{channel, sync_channel},
+    thread,
+};
 
-use eframe::{NativeOptions, egui::{CentralPanel, CtxRef, Hyperlink, Label, ScrollArea, Separator, TextStyle, TopBottomPanel, Ui, Vec2, Visuals}, epi::App, run_native};
+use eframe::{
+    egui::{
+        CentralPanel, CtxRef, Hyperlink, Label, ScrollArea, Separator, TextStyle, TopBottomPanel,
+        Ui, Vec2, Visuals,
+    },
+    epi::App,
+    run_native, NativeOptions,
+};
 use headlines::{Headlines, Msg, NewsCardData, PADDING};
 use newsapi::NewsAPI;
 
@@ -21,7 +31,7 @@ impl App for Headlines {
         self.app_tx = Some(app_tx);
 
         self.news_rx = Some(news_rx);
-    
+
         thread::spawn(move || {
             if !api_key.is_empty() {
                 fetch_news(&api_key, &mut news_tx);
@@ -41,7 +51,6 @@ impl App for Headlines {
         self.configure_fonts(ctx);
     }
     fn update(&mut self, ctx: &eframe::egui::CtxRef, frame: &mut eframe::epi::Frame<'_>) {
-
         ctx.request_repaint();
 
         if self.config.dark_mode {
@@ -49,7 +58,7 @@ impl App for Headlines {
         } else {
             ctx.set_visuals(Visuals::light());
         }
-        
+
         if !self.api_key_initialized {
             self.render_config(ctx);
         } else {
@@ -78,7 +87,7 @@ fn fetch_news(api_key: &str, news_tx: &mut std::sync::mpsc::Sender<NewsCardData>
             let news = NewsCardData {
                 title: a.title().to_string(),
                 url: a.url().to_string(),
-                desc: a.desc().map(|s| s.to_string()).unwrap_or("...".to_string())
+                desc: a.desc().map(|s| s.to_string()).unwrap_or("...".to_string()),
             };
             if let Err(e) = news_tx.send(news) {
                 tracing::error!("Error sending news data: {}", e);

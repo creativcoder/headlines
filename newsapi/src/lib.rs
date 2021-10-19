@@ -19,7 +19,7 @@ pub enum NewsApiError {
     BadRequest(&'static str),
     #[error("Async request failed")]
     #[cfg(feature = "async")]
-    AsyncRequestFailed(#[from] reqwest::Error)
+    AsyncRequestFailed(#[from] reqwest::Error),
 }
 
 #[derive(Deserialize, Debug)]
@@ -39,7 +39,7 @@ impl NewsAPIResponse {
 pub struct Article {
     title: String,
     url: String,
-    description: Option<String>
+    description: Option<String>,
 }
 
 impl Article {

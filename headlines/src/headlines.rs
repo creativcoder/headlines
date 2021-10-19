@@ -1,7 +1,14 @@
-use std::{borrow::Cow, iter::FromIterator, sync::mpsc::{Receiver, SyncSender}};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use std::{
+    borrow::Cow,
+    iter::FromIterator,
+    sync::mpsc::{Receiver, SyncSender},
+};
 
-use eframe::egui::{self, Button, Color32, CtxRef, FontDefinitions, FontFamily, Hyperlink, Label, Layout, Separator, TopBottomPanel, Window, epaint::text};
+use eframe::egui::{
+    self, epaint::text, Button, Color32, CtxRef, FontDefinitions, FontFamily, Hyperlink, Label,
+    Layout, Separator, TopBottomPanel, Window,
+};
 
 pub const PADDING: f32 = 5.0;
 const WHITE: Color32 = Color32::from_rgb(255, 255, 255);
@@ -10,27 +17,30 @@ const CYAN: Color32 = Color32::from_rgb(0, 255, 255);
 const RED: Color32 = Color32::from_rgb(255, 0, 0);
 
 pub enum Msg {
-    ApiKeySet(String)
+    ApiKeySet(String),
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct HeadlinesConfig {
     pub dark_mode: bool,
-    pub api_key: String
+    pub api_key: String,
 }
 
 impl Default for HeadlinesConfig {
     fn default() -> Self {
-        Self { dark_mode: Default::default(), api_key: String::new() }
+        Self {
+            dark_mode: Default::default(),
+            api_key: String::new(),
+        }
     }
 }
 
 pub struct Headlines {
     pub articles: Vec<NewsCardData>,
-   pub config: HeadlinesConfig,
-   pub api_key_initialized: bool,
-   pub news_rx: Option<Receiver<NewsCardData>>,
-   pub app_tx: Option<SyncSender<Msg>>
+    pub config: HeadlinesConfig,
+    pub api_key_initialized: bool,
+    pub news_rx: Option<Receiver<NewsCardData>>,
+    pub app_tx: Option<SyncSender<Msg>>,
 }
 
 pub struct NewsCardData {
@@ -48,7 +58,7 @@ impl Headlines {
             articles: vec![],
             config,
             news_rx: None,
-            app_tx: None
+            app_tx: None,
         }
     }
 
@@ -120,13 +130,16 @@ impl Headlines {
                         frame.quit();
                     }
                     let refresh_btn = ui.add(Button::new("🔄").text_style(egui::TextStyle::Body));
-                    let theme_btn = ui.add(Button::new({
-                        if self.config.dark_mode {
-                            "🌞"
-                        } else {
-                            "🌙"
-                        }
-                    }).text_style(egui::TextStyle::Body));
+                    let theme_btn = ui.add(
+                        Button::new({
+                            if self.config.dark_mode {
+                                "🌞"
+                            } else {
+                                "🌙"
+                            }
+                        })
+                        .text_style(egui::TextStyle::Body),
+                    );
                     if theme_btn.clicked() {
                         self.config.dark_mode = !self.config.dark_mode;
                     }
@@ -141,7 +154,7 @@ impl Headlines {
             match rx.try_recv() {
                 Ok(news_data) => {
                     self.articles.push(news_data);
-                },
+                }
                 Err(e) => {
                     tracing::warn!("Error receiving msg: {}", e);
                 }
@@ -154,10 +167,13 @@ impl Headlines {
             ui.label("Enter you API_KEY for newsapi.org");
             let text_input = ui.text_edit_singleline(&mut self.config.api_key);
             if text_input.lost_focus() && ui.input().key_pressed(egui::Key::Enter) {
-                if let Err(e) = confy::store("headlines", HeadlinesConfig {
-                    dark_mode: self.config.dark_mode,
-                    api_key: self.config.api_key.to_string()
-                }) {
+                if let Err(e) = confy::store(
+                    "headlines",
+                    HeadlinesConfig {
+                        dark_mode: self.config.dark_mode,
+                        api_key: self.config.api_key.to_string(),
+                    },
+                ) {
                     tracing::error!("Failed saving app state: {}", e);
                 }
 
