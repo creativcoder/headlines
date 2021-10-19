@@ -15,15 +15,15 @@ A native GUI app built with Rust using [egui](https://github.com/emilk/egui). Us
 
 [Part A](https://youtu.be/NtUkr_z7l84)
 
-Part B (soon)
+[Part B](https://www.youtube.com/watch?v=SvFPdgGwzTQ)
 
 ## Implementation Status
 
 - [X] Base UI
-- [ ] Integrate dark mode
-- [ ] Integrate real articles feed.
-- [ ] Config window for setting API_KEY
-- [ ] State persistance
+- [X] Integrate dark mode
+- [X] Integrate real articles feed.
+- [X] Config window for setting API_KEY
+- [X] State persistance
 
 ## Setup
 
