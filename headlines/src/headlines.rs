@@ -1,4 +1,4 @@
-use std::{borrow::Cow, iter::FromIterator};
+use std::{borrow::Cow, iter::FromIterator, sync::mpsc::{Receiver, SyncSender}};
 use serde::{Serialize, Deserialize};
 
 use eframe::egui::{self, Button, Color32, CtxRef, FontDefinitions, FontFamily, Hyperlink, Label, Layout, Separator, TopBottomPanel, Window, epaint::text};
@@ -8,6 +8,10 @@ const WHITE: Color32 = Color32::from_rgb(255, 255, 255);
 const BLACK: Color32 = Color32::from_rgb(0, 0, 0);
 const CYAN: Color32 = Color32::from_rgb(0, 255, 255);
 const RED: Color32 = Color32::from_rgb(255, 0, 0);
+
+pub enum Msg {
+    ApiKeySet(String)
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct HeadlinesConfig {
@@ -22,31 +26,29 @@ impl Default for HeadlinesConfig {
 }
 
 pub struct Headlines {
-    articles: Vec<NewsCardData>,
+    pub articles: Vec<NewsCardData>,
    pub config: HeadlinesConfig,
-   pub api_key_initialized: bool
+   pub api_key_initialized: bool,
+   pub news_rx: Option<Receiver<NewsCardData>>,
+   pub app_tx: Option<SyncSender<Msg>>
 }
 
-struct NewsCardData {
-    title: String,
-    desc: String,
-    url: String,
+pub struct NewsCardData {
+    pub title: String,
+    pub desc: String,
+    pub url: String,
 }
 
 impl Headlines {
     pub fn new() -> Headlines {
-        let iter = (0..20).map(|a| NewsCardData {
-            title: format!("title{}", a),
-            desc: format!("desc{}", a),
-            url: format!("https://example.com/{}", a),
-        });
-
         let config: HeadlinesConfig = confy::load("headlines").unwrap_or_default();
 
         Headlines {
-            articles: Vec::from_iter(iter),
+            api_key_initialized: !config.api_key.is_empty(),
+            articles: vec![],
             config,
-            api_key_initialized: false
+            news_rx: None,
+            app_tx: None
         }
     }
 
@@ -134,6 +136,19 @@ impl Headlines {
         });
     }
 
+    pub fn preload_articles(&mut self) {
+        if let Some(rx) = &self.news_rx {
+            match rx.try_recv() {
+                Ok(news_data) => {
+                    self.articles.push(news_data);
+                },
+                Err(e) => {
+                    tracing::warn!("Error receiving msg: {}", e);
+                }
+            }
+        }
+    }
+
     pub fn render_config(&mut self, ctx: &CtxRef) {
         Window::new("Configuration").show(ctx, |ui| {
             ui.label("Enter you API_KEY for newsapi.org");
@@ -147,6 +162,9 @@ impl Headlines {
                 }
 
                 self.api_key_initialized = true;
+                if let Some(tx) = &self.app_tx {
+                    tx.send(Msg::ApiKeySet(self.config.api_key.to_string()));
+                }
 
                 tracing::error!("api key set");
             }
