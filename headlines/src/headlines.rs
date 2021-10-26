@@ -24,6 +24,7 @@ pub enum Msg {
 pub struct HeadlinesConfig {
     pub dark_mode: bool,
     pub api_key: String,
+    pub refresh_news_data: bool,
 }
 
 impl Default for HeadlinesConfig {
@@ -31,6 +32,7 @@ impl Default for HeadlinesConfig {
         Self {
             dark_mode: Default::default(),
             api_key: String::new(),
+            refresh_news_data: Default::default(),
         }
     }
 }
@@ -85,6 +87,22 @@ impl Headlines {
     }
 
     pub fn render_news_cards(&self, ui: &mut eframe::egui::Ui) {
+        if self.config.refresh_news_data{
+                let default_loading_msg = NewsCardData {
+                    title: String::from("Loading..."),
+                    desc: String::from(""),
+                    url: String::from("")
+                };
+                ui.add_space(PADDING);
+                if self.config.dark_mode {
+                    ui.colored_label(WHITE, default_loading_msg.title);
+                } else {
+                    ui.colored_label(BLACK, default_loading_msg.title);
+                }
+                return
+        }
+
+
         for a in &self.articles {
             ui.add_space(PADDING);
             // render title
@@ -130,6 +148,9 @@ impl Headlines {
                         frame.quit();
                     }
                     let refresh_btn = ui.add(Button::new("🔄").text_style(egui::TextStyle::Body));
+                    if refresh_btn.clicked() {
+                        self.config.refresh_news_data = true;
+                    }
                     let theme_btn = ui.add(
                         Button::new({
                             if self.config.dark_mode {
@@ -172,6 +193,7 @@ impl Headlines {
                     HeadlinesConfig {
                         dark_mode: self.config.dark_mode,
                         api_key: self.config.api_key.to_string(),
+                        refresh_news_data: self.config.refresh_news_data,
                     },
                 ) {
                     tracing::error!("Failed saving app state: {}", e);
