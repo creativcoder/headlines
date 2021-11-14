@@ -4,7 +4,7 @@
 <h1>Headlines [WIP]</h1>
 
 
-A native GUI app built with Rust using [egui](https://github.com/emilk/egui). Uses newsapi.org as the source to fetch news articles.
+A cross platform native GUI app built with Rust using [egui](https://github.com/emilk/egui). Uses newsapi.org as the source to fetch news articles.
 </div>
 
 
@@ -24,6 +24,7 @@ A native GUI app built with Rust using [egui](https://github.com/emilk/egui). Us
 - [X] Integrate real articles feed.
 - [X] Config window for setting API_KEY
 - [X] State persistance
+- [X] Cross platform
 
 ## Setup
 
@@ -34,11 +35,13 @@ Once done, run `cargo run` on the terminal (you need to have the Rust toolchain 
 
 ### Windows
 
-TODO. Help me test on windows
+Works as usual using `cargo run`
 
 ### Web
 
-TODO
+Run `./setup_web.sh`
+
+Launch with `./start_web.sh`
 
 ## Contributions
 

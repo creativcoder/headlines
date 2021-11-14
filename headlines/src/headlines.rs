@@ -6,8 +6,8 @@ use std::{
 };
 
 use eframe::egui::{
-    self, epaint::text, Button, Color32, CtxRef, FontDefinitions, FontFamily, Hyperlink, Label,
-    Layout, Separator, TopBottomPanel, Window,
+    self, epaint::text, Button, CentralPanel, Color32, CtxRef, FontDefinitions, FontFamily,
+    Hyperlink, Label, Layout, Separator, TopBottomPanel, Window,
 };
 
 pub const PADDING: f32 = 5.0;
@@ -18,6 +18,7 @@ const RED: Color32 = Color32::from_rgb(255, 0, 0);
 
 pub enum Msg {
     ApiKeySet(String),
+    Refresh,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -51,12 +52,10 @@ pub struct NewsCardData {
 
 impl Headlines {
     pub fn new() -> Headlines {
-        let config: HeadlinesConfig = confy::load("headlines").unwrap_or_default();
-
         Headlines {
-            api_key_initialized: !config.api_key.is_empty(),
+            api_key_initialized: Default::default(),
             articles: vec![],
-            config,
+            config: Default::default(),
             news_rx: None,
             app_tx: None,
         }
@@ -125,11 +124,19 @@ impl Headlines {
                 });
                 // controls
                 ui.with_layout(Layout::right_to_left(), |ui| {
-                    let close_btn = ui.add(Button::new("❌").text_style(egui::TextStyle::Body));
-                    if close_btn.clicked() {
-                        frame.quit();
+                    if !cfg!(target_arch = "wasm32") {
+                        let close_btn = ui.add(Button::new("❌").text_style(egui::TextStyle::Body));
+                        if close_btn.clicked() {
+                            frame.quit();
+                        }
                     }
                     let refresh_btn = ui.add(Button::new("🔄").text_style(egui::TextStyle::Body));
+                    if refresh_btn.clicked() {
+                        self.articles.clear();
+                        if let Some(tx) = &self.app_tx {
+                            tx.send(Msg::Refresh);
+                        }
+                    }
                     let theme_btn = ui.add(
                         Button::new({
                             if self.config.dark_mode {
@@ -163,30 +170,22 @@ impl Headlines {
     }
 
     pub fn render_config(&mut self, ctx: &CtxRef) {
-        Window::new("Configuration").show(ctx, |ui| {
-            ui.label("Enter you API_KEY for newsapi.org");
-            let text_input = ui.text_edit_singleline(&mut self.config.api_key);
-            if text_input.lost_focus() && ui.input().key_pressed(egui::Key::Enter) {
-                if let Err(e) = confy::store(
-                    "headlines",
-                    HeadlinesConfig {
-                        dark_mode: self.config.dark_mode,
-                        api_key: self.config.api_key.to_string(),
-                    },
-                ) {
-                    tracing::error!("Failed saving app state: {}", e);
-                }
+        CentralPanel::default().show(ctx, |ui| {
+            Window::new("Configuration").show(ctx, |ui| {
+                ui.label("Enter you API_KEY for newsapi.org");
+                let text_input = ui.text_edit_singleline(&mut self.config.api_key);
+                if text_input.lost_focus() && ui.input().key_pressed(egui::Key::Enter) {
+                    self.api_key_initialized = true;
+                    if let Some(tx) = &self.app_tx {
+                        tx.send(Msg::ApiKeySet(self.config.api_key.to_string()));
+                    }
 
-                self.api_key_initialized = true;
-                if let Some(tx) = &self.app_tx {
-                    tx.send(Msg::ApiKeySet(self.config.api_key.to_string()));
+                    tracing::info!("api key set");
                 }
-
-                tracing::error!("api key set");
-            }
-            tracing::error!("{}", &self.config.api_key);
-            ui.label("If you havn't registered for the API_KEY, head over to");
-            ui.hyperlink("https://newsapi.org");
+                tracing::error!("{}", &self.config.api_key);
+                ui.label("If you havn't registered for the API_KEY, head over to");
+                ui.hyperlink("https://newsapi.org");
+            });
         });
     }
 }

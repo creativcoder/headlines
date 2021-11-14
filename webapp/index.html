@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Headlines</title>
+
+    <!-- Adapted from: https://github.com/emilk/eframe_template/blob/master/docs/index.html -->
+    <style>
+        html {
+            /* Remove touch delay: */
+            touch-action: manipulation;
+        }
+
+        body {
+            /* Background color for what is not covered by the egui canvas,
+            or where the egui canvas is translucent. */
+            background: #404040;
+        }
+
+        /* Allow canvas to fill entire web page: */
+        html,
+        body {
+            overflow: hidden;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Position canvas in center-top: */
+        canvas {
+            margin-right: auto;
+            margin-left: auto;
+            display: block;
+            position: absolute;
+            top: 0%;
+            left: 50%;
+            transform: translate(-50%, 0%);
+        }
+    </style>
+
+</head>
+<body>
+
+    <canvas id="app"></canvas>
+
+    <script src="headlines.js"></script>
+    <script>
+        wasm_bindgen("./headlines_bg.wasm").then(on_wasm_loaded).catch(console.error);
+        function on_wasm_loaded() {
+            wasm_bindgen.main_web("app");
+        }
+    </script>
+    
+</body>
+</html>
