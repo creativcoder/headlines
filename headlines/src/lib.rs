@@ -40,21 +40,18 @@ impl App for Headlines {
         let news_tx_web = news_tx.clone();
 
         #[cfg(not(target_arch = "wasm32"))]
-        thread::spawn(move || {
-            if !api_key.is_empty() {
-                fetch_news(&api_key, &mut news_tx);
-            } else {
-                loop {
-                    match app_rx.recv() {
-                        Ok(Msg::ApiKeySet(api_key)) => {
-                            fetch_news(&api_key, &mut news_tx);
-                        }
-                        Ok(Msg::Refresh) => {
-                            fetch_news(&api_key, &mut news_tx);
-                        }
-                        Err(e) => {
-                            tracing::error!("failed receiving msg: {}", e);
-                        }
+        fetch_news(&api_key, &mut news_tx);
+
+        #[cfg(not(target_arch = "wasm32"))]
+        thread::spawn(move || loop {
+
+            if let Ok(rx) = app_rx.recv() {
+                match rx {
+                    Msg::ApiKeySet(api_key) => {
+                        fetch_news(&api_key, &mut news_tx);
+                    }
+                    Msg::Refresh => {
+                        fetch_news(&api_key, &mut news_tx);
                     }
                 }
             }
