@@ -40,8 +40,10 @@ impl App for Headlines {
         let news_tx_web = news_tx.clone();
 
         #[cfg(not(target_arch = "wasm32"))]
-        fetch_news(&api_key, &mut news_tx);
-
+        if !api_key.is_empty() {
+            fetch_news(&api_key, &mut news_tx);
+        }
+        
         #[cfg(not(target_arch = "wasm32"))]
         thread::spawn(move || loop {
 
