@@ -11,11 +11,15 @@ A cross platform native GUI app built with Rust using [egui](https://github.com/
 ![screenshot](./assets/thumb.png)
 ### This is a WIP and the current status can be found in [implementation status](#implementation-status)
 
-## Video walkthrough
+## Video walkthroughs
 
-[Part A](https://youtu.be/NtUkr_z7l84)
+[EP 7a](https://youtu.be/NtUkr_z7l84)
 
-[Part B](https://www.youtube.com/watch?v=SvFPdgGwzTQ)
+[EP 7b](https://www.youtube.com/watch?v=SvFPdgGwzTQ)
+
+[EP 8]()
+
+[EP 9](https://youtu.be/EOIhsRxhV80)
 
 ## Implementation Status
 
