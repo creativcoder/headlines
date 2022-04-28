@@ -9,7 +9,9 @@ A cross platform native GUI app built with Rust using [egui](https://github.com/
 
 
 ![screenshot](./assets/thumb.png)
-### This is a WIP and the current status can be found in [implementation status](#implementation-status)
+
+This project is intended to serve as educational content
+for folks learning Rust. To follow along in the journey check out the video walkthoughs below:
 
 ## Video walkthroughs
 
@@ -17,11 +19,13 @@ A cross platform native GUI app built with Rust using [egui](https://github.com/
 
 [EP 7b](https://www.youtube.com/watch?v=SvFPdgGwzTQ)
 
-[EP 8]()
+[EP 8](https://www.youtube.com/watch?v=4MKcqR9z8AU)
 
 [EP 9](https://youtu.be/EOIhsRxhV80)
 
-## Implementation Status
+Subscribe to the [creativcoder](https://www.youtube.com/c/creativcoder?sub_confirmation=1) channel to stay updated for more.
+
+## Implementation Status / Roadmap
 
 - [X] Base UI
 - [X] Integrate dark mode
@@ -29,23 +33,33 @@ A cross platform native GUI app built with Rust using [egui](https://github.com/
 - [X] Config window for setting API_KEY
 - [X] State persistance
 - [X] Cross platform
+- [ ] Build and release script
+- [ ] CI integration using GitHub Actions
+- [ ] More API features
+- [ ] Multiple news sources.
 
-## Setup
+## Build instructions
+
+Before building headlines make sure `egui` [dependencies](https://github.com/emilk/egui#demo) are installed.
 
 ### Linux
 
-Make sure `egui` [dependencies](https://github.com/emilk/egui#demo) are installed.
-Once done, run `cargo run` on the terminal (you need to have the Rust toolchain installed).
+
+On linux run `cargo run` on the terminal (you need to have the Rust toolchain installed).
 
 ### Windows
 
-Works as usual using `cargo run`
+Builds on Windows as usual using `cargo run`.
+
+### Mac
+
+TODO
 
 ### Web
 
-Run `./setup_web.sh`
-
-Launch with `./start_web.sh`
+Headlines can also run locally in your browser.
+Use the  `./setup_web.sh` script to install dependencies
+and use `./start_web.sh` to spawn the app in the browser.
 
 ## Contributions
 
