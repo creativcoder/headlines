@@ -1,26 +1,29 @@
 mod headlines;
 
 use eframe::{
-    egui::{
-        CentralPanel, Context, Hyperlink, Label, RichText, ScrollArea, Separator, TextStyle,
-        TopBottomPanel, Ui, Visuals,
-    },
-    epi::App,
+    egui::{CentralPanel, ScrollArea, Spinner, Visuals},
+    App,
 };
+use headlines::{render_footer, render_header};
 pub use headlines::{Headlines, Msg, NewsCardData, PADDING};
 use newsapi::NewsAPI;
 
 const APP_NAME: &str = "headlines";
 
 impl App for Headlines {
-    fn update(&mut self, ctx: &eframe::egui::Context, frame: &mut eframe::epi::Frame) {
+    fn update(&mut self, ctx: &eframe::egui::Context, frame: &mut eframe::Frame) {
         ctx.request_repaint();
-        ctx.set_debug_on_hover(true);
+        ctx.set_debug_on_hover(false);
 
         if self.config.dark_mode {
             ctx.set_visuals(Visuals::dark());
         } else {
             ctx.set_visuals(Visuals::light());
+        }
+
+        if self.toggle_about {
+            self.render_about(ctx);
+            return;
         }
 
         if !self.api_key_initialized {
@@ -33,9 +36,7 @@ impl App for Headlines {
 
             CentralPanel::default().show(ctx, |ui| {
                 if self.articles.is_empty() {
-                    ui.vertical_centered_justified(|ui| {
-                        ui.heading("Loading ⌛");
-                    });
+                    ui.vertical_centered_justified(|ui| ui.add(Spinner::new()));
                 } else {
                     render_header(ui);
                     ScrollArea::vertical().show(ui, |ui| {
@@ -46,8 +47,8 @@ impl App for Headlines {
         }
     }
 
-    fn save(&mut self, storage: &mut dyn eframe::epi::Storage) {
-        eframe::epi::set_value(storage, "headlines", &self.config);
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        eframe::set_value(storage, APP_NAME, &self.config);
     }
 }
 
@@ -89,45 +90,14 @@ async fn fetch_web(api_key: String, news_tx: std::sync::mpsc::Sender<NewsCardDat
     }
 }
 
-fn render_footer(ctx: &Context) {
-    TopBottomPanel::bottom("footer").show(ctx, |ui| {
-        ui.vertical_centered(|ui| {
-            ui.add_space(10.);
-            ui.add(Label::new(
-                RichText::new("API source: newsapi.org")
-                    .small()
-                    .text_style(TextStyle::Monospace),
-            ));
-            ui.add(Hyperlink::from_label_and_url(
-                "Made with egui",
-                "https://github.com/emilk/egui",
-            ));
-            ui.add(Hyperlink::from_label_and_url(
-                "creativcoder/headlines",
-                "https://github.com/creativcoder/headlines",
-            ));
-            ui.add_space(10.);
-        })
-    });
-}
-
-fn render_header(ui: &mut Ui) {
-    ui.vertical_centered(|ui| {
-        ui.heading("headlines");
-    });
-    ui.add_space(PADDING);
-    let sep = Separator::default().spacing(20.);
-    ui.add(sep);
-}
-
 #[cfg(target_arch = "wasm32")]
 use eframe::wasm_bindgen::{self, prelude::*};
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn main_web(canvas_id: &str) {
-    let headlines = Headlines::new();
+    let headlines = Headlines::default();
     tracing_wasm::set_as_global_default();
     eframe::start_web(canvas_id, Box::new(|cc| Box::new(headlines.init(cc))))
-        .expect("Failed to launch app");
+        .expect("Failed to launch headlines");
 }

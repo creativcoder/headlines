@@ -2,28 +2,26 @@ use serde::{Deserialize, Serialize};
 use std::sync::mpsc::{channel, sync_channel, Receiver, SyncSender};
 
 #[cfg(not(target_arch = "wasm32"))]
+use crate::fetch_news;
+use crate::APP_NAME;
+#[cfg(not(target_arch = "wasm32"))]
 use std::thread;
 
+#[cfg(target_arch = "wasm32")]
+use crate::fetch_web;
 use eframe::{
     egui::{
         self, Button, CentralPanel, Color32, Context, FontData, FontDefinitions, FontFamily,
-        Hyperlink, Label, Layout, RichText, Separator, TopBottomPanel, Window,
+        Hyperlink, Label, Layout, RichText, Separator, TextStyle, TopBottomPanel, Ui, Window,
     },
     CreationContext,
 };
-
-#[cfg(not(target_arch = "wasm32"))]
-use crate::fetch_news;
-use crate::APP_NAME;
 
 pub const PADDING: f32 = 5.0;
 const WHITE: Color32 = Color32::from_rgb(255, 255, 255);
 const BLACK: Color32 = Color32::from_rgb(0, 0, 0);
 const CYAN: Color32 = Color32::from_rgb(0, 255, 255);
 const RED: Color32 = Color32::from_rgb(255, 0, 0);
-
-#[cfg(target_arch = "wasm32")]
-use crate::fetch_web;
 
 pub enum Msg {
     ApiKeySet(String),
@@ -45,10 +43,13 @@ impl Default for HeadlinesConfig {
     }
 }
 
+#[derive(Default)]
 pub struct Headlines {
     pub articles: Vec<NewsCardData>,
     pub config: HeadlinesConfig,
     pub api_key_initialized: bool,
+    pub toggle_config: bool,
+    pub toggle_about: bool,
     pub news_rx: Option<Receiver<NewsCardData>>,
     pub app_tx: Option<SyncSender<Msg>>,
 }
@@ -60,21 +61,10 @@ pub struct NewsCardData {
 }
 
 impl Headlines {
-    pub fn new() -> Headlines {
-        Headlines {
-            api_key_initialized: Default::default(),
-            articles: vec![],
-            config: Default::default(),
-            news_rx: None,
-            app_tx: None,
-        }
-    }
-
     pub fn init(mut self, cc: &CreationContext) -> Self {
         if let Some(storage) = cc.storage {
-            self.config = eframe::epi::get_value(storage, APP_NAME).unwrap_or_default();
+            self.config = eframe::get_value(storage, APP_NAME).unwrap_or_default();
             self.api_key_initialized = !self.config.api_key.is_empty();
-            tracing::info!(self.api_key_initialized);
         }
 
         let api_key = self.config.api_key.to_string();
@@ -91,19 +81,18 @@ impl Headlines {
             thread::spawn(move || {
                 if !api_key.is_empty() {
                     fetch_news(&api_key, &mut news_tx);
-                } else {
-                    loop {
-                        match app_rx.recv() {
-                            Ok(Msg::ApiKeySet(api_key)) => {
-                                fetch_news(&api_key, &mut news_tx);
-                            }
-                            Ok(Msg::Refresh) => {
-                                fetch_news(&api_key, &mut news_tx);
-                            }
-                            Err(e) => {
-                                tracing::error!("failed receiving msg: {}", e);
-                            }
+                }
+
+                loop {
+                    match app_rx.recv() {
+                        Ok(Msg::ApiKeySet(api_key)) => {
+                            tracing::info!("api key set recvd");
+                            fetch_news(&api_key, &mut news_tx);
                         }
+                        Ok(Msg::Refresh) => {
+                            fetch_news(&api_key, &mut news_tx);
+                        }
+                        Err(_) => continue,
                     }
                 }
             });
@@ -190,7 +179,7 @@ impl Headlines {
         }
     }
 
-    pub(crate) fn render_top_panel(&mut self, ctx: &Context, frame: &mut eframe::epi::Frame) {
+    pub(crate) fn render_top_panel(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
         // define a TopBottomPanel widget
         TopBottomPanel::top("top_panel").show(ctx, |ui| {
             ui.add_space(10.);
@@ -198,7 +187,7 @@ impl Headlines {
                 // logo
                 ui.with_layout(Layout::left_to_right(), |ui| {
                     ui.add(Label::new(
-                        RichText::new("📓").text_style(egui::TextStyle::Heading),
+                        RichText::new("📰").text_style(egui::TextStyle::Heading),
                     ));
                 });
                 // controls
@@ -221,6 +210,7 @@ impl Headlines {
                                 .expect("Failed sending refresh event.");
                         }
                     }
+                    // theme button
                     let theme_btn = ui.add(Button::new(
                         RichText::new({
                             if self.config.dark_mode {
@@ -234,6 +224,23 @@ impl Headlines {
                     if theme_btn.clicked() {
                         self.config.dark_mode = !self.config.dark_mode;
                     }
+
+                    // config button
+                    let config_btn = ui.add(Button::new(
+                        RichText::new("🛠").text_style(egui::TextStyle::Body),
+                    ));
+
+                    if config_btn.clicked() {
+                        self.api_key_initialized = !self.api_key_initialized;
+                        self.articles.clear();
+                    }
+
+                    // about button
+                    let about_btn =
+                        ui.add(Button::new(RichText::new("ℹ").text_style(TextStyle::Body)));
+                    if about_btn.clicked() {
+                        self.toggle_about = !self.toggle_about;
+                    }
                 });
             });
             ui.add_space(10.);
@@ -242,33 +249,67 @@ impl Headlines {
 
     pub fn preload_articles(&mut self) {
         if let Some(rx) = &self.news_rx {
-            match rx.try_recv() {
-                Ok(news_data) => {
-                    self.articles.push(news_data);
-                }
-                Err(_) => {}
+            if let Ok(news_data) = rx.try_recv() {
+                self.articles.push(news_data);
             }
         }
     }
 
     pub fn render_config(&mut self, ctx: &Context) {
         CentralPanel::default().show(ctx, |_| {
-            Window::new("Configuration").show(ctx, |ui| {
+            Window::new("App configuration").show(ctx, |ui| {
                 ui.label("Enter you API_KEY for newsapi.org");
                 let text_input = ui.text_edit_singleline(&mut self.config.api_key);
                 if text_input.lost_focus() && ui.input().key_pressed(egui::Key::Enter) {
-                    self.api_key_initialized = true;
                     if let Some(tx) = &self.app_tx {
                         tx.send(Msg::ApiKeySet(self.config.api_key.to_string()))
                             .expect("Failed sending ApiKeySet event");
                     }
-
-                    tracing::info!("api key set");
+                    self.api_key_initialized = !self.api_key_initialized;
+                    tracing::info!("API_KEY set");
                 }
-                tracing::error!("{}", &self.config.api_key);
-                ui.label("If you havn't registered for the API_KEY, head over to");
-                ui.hyperlink("https://newsapi.org");
+                ui.label("Don't have the API_KEY? register at:");
+                ui.hyperlink("https://newsapi.org/register");
             });
         });
     }
+
+    pub fn render_about(&mut self, ctx: &Context) {
+        let window = Window::new("About headlines").open(&mut self.toggle_about);
+        window.show(ctx, |ui| {
+            let info = Label::new("A simple news reading app that runs on all platforms.");
+            ui.add(info);
+        });
+    }
+}
+
+pub(crate) fn render_footer(ctx: &Context) {
+    TopBottomPanel::bottom("footer").show(ctx, |ui| {
+        ui.vertical_centered(|ui| {
+            ui.add_space(10.);
+            ui.add(Label::new(
+                RichText::new("API source: newsapi.org")
+                    .small()
+                    .text_style(TextStyle::Monospace),
+            ));
+            ui.add(Hyperlink::from_label_and_url(
+                "Made with egui",
+                "https://github.com/emilk/egui",
+            ));
+            ui.add(Hyperlink::from_label_and_url(
+                "creativcoder/headlines",
+                "https://github.com/creativcoder/headlines",
+            ));
+            ui.add_space(10.);
+        })
+    });
+}
+
+pub(crate) fn render_header(ui: &mut Ui) {
+    ui.vertical_centered(|ui| {
+        ui.heading("headlines");
+    });
+    ui.add_space(PADDING);
+    let sep = Separator::default().spacing(20.);
+    ui.add(sep);
 }

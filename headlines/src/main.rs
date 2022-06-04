@@ -2,9 +2,12 @@ use eframe::{egui::Vec2, run_native, NativeOptions};
 use headlines::Headlines;
 
 fn main() {
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt()
+        .with_file(true)
+        .with_line_number(true)
+        .init();
 
-    let headlines = Headlines::new();
+    let headlines = Headlines::default();
     let mut win_option = NativeOptions::default();
     win_option.initial_window_size = Some(Vec2::new(540., 960.));
     run_native(
