@@ -44,7 +44,6 @@ Before building headlines make sure `egui` [dependencies](https://github.com/emi
 
 ### Linux
 
-
 On linux run `cargo run` on the terminal (you need to have the Rust toolchain installed).
 
 ### Windows
@@ -57,9 +56,10 @@ TODO
 
 ### Web
 
-Headlines can also run locally in your browser.
-Use the  `./setup_web.sh` script to install dependencies
-and use `./start_web.sh` to spawn the app in the browser.
+Headlines can also be served from your browser (only at localhost at the moment, because of CORS)
+
+* Run `./setup_web.sh` script to install dependencies.
+* Run `./start_web.sh` to spawn the app in the browser.
 
 ## Contributions
 
