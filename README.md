@@ -38,25 +38,25 @@ Subscribe to the [creativcoder](https://www.youtube.com/c/creativcoder?sub_confi
 - [ ] More API features
 - [ ] Multiple news sources.
 
-## Build instructions
+## Build and run instructions
 
-Before building headlines make sure `egui` [dependencies](https://github.com/emilk/egui#demo) are installed.
+Before building headlines make sure you have rust toolchain installed and `egui` [dependencies](https://github.com/emilk/egui#demo) are installed.
 
 ### Linux
 
-On linux run `cargo run` on the terminal (you need to have the Rust toolchain installed).
+`cargo run`
 
 ### Windows
 
-Builds on Windows as usual using `cargo run`.
+`cargo run`.
 
 ### Mac
 
-TODO
+`cargo run` should work but would help if someone can test it.
 
 ### Web
 
-Headlines can also be served from your browser (only at localhost at the moment, because of CORS)
+Headlines can be served from your browser (only at localhost at the moment, because of CORS)
 
 * Run `./setup_web.sh` script to install dependencies.
 * Run `./start_web.sh` to spawn the app in the browser.

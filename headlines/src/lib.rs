@@ -4,7 +4,6 @@ use eframe::{
     egui::{CentralPanel, ScrollArea, Spinner, Visuals},
     App,
 };
-use headlines::{render_footer, render_header};
 pub use headlines::{Headlines, Msg, NewsCardData, PADDING};
 use newsapi::NewsAPI;
 
@@ -26,19 +25,17 @@ impl App for Headlines {
             return;
         }
 
-        if !self.api_key_initialized {
+        if self.toggle_config || !self.api_key_initialized {
             self.render_config(ctx);
         } else {
             self.preload_articles();
-
             self.render_top_panel(ctx, frame);
-            render_footer(ctx);
-
+            self.render_footer(ctx);
             CentralPanel::default().show(ctx, |ui| {
                 if self.articles.is_empty() {
                     ui.vertical_centered_justified(|ui| ui.add(Spinner::new()));
                 } else {
-                    render_header(ui);
+                    self.render_header(ui);
                     ScrollArea::vertical().show(ui, |ui| {
                         self.render_news_cards(ui);
                     });
@@ -98,6 +95,11 @@ use eframe::wasm_bindgen::{self, prelude::*};
 pub fn main_web(canvas_id: &str) {
     let headlines = Headlines::default();
     tracing_wasm::set_as_global_default();
-    eframe::start_web(canvas_id, Box::new(|cc| Box::new(headlines.init(cc))))
-        .expect("Failed to launch headlines");
+    let web_options = eframe::WebOptions::default();
+    eframe::start_web(
+        canvas_id,
+        web_options,
+        Box::new(|cc| Box::new(headlines.init(cc))),
+    )
+    .expect("Failed to launch headlines");
 }

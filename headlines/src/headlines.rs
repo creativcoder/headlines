@@ -68,13 +68,12 @@ impl Headlines {
         }
 
         let api_key = self.config.api_key.to_string();
-
         let (app_tx, app_rx) = sync_channel(1);
-
         self.app_tx = Some(app_tx);
-
+        #[allow(unused_mut)]
         let (mut news_tx, news_rx) = channel();
         self.news_rx = Some(news_rx);
+        self.toggle_config = false;
 
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -109,7 +108,7 @@ impl Headlines {
             })
             .forget();
 
-            gloo_timers::callback::Interval::new(500, move || match app_rx.try_recv() {
+            gloo_timers::callback::Interval::new(2000, move || match app_rx.try_recv() {
                 Ok(Msg::ApiKeySet(api_key)) => {
                     wasm_bindgen_futures::spawn_local(fetch_web(api_key.clone(), news_tx.clone()));
                 }
@@ -118,7 +117,7 @@ impl Headlines {
                     wasm_bindgen_futures::spawn_local(fetch_web(api_key, news_tx.clone()));
                 }
                 Err(e) => {
-                    tracing::error!("failed receiving msg: {}", e);
+                    tracing::warn!("failed receiving msg: {}", e);
                 }
             })
             .forget();
@@ -169,7 +168,8 @@ impl Headlines {
             }
             ui.add_space(PADDING);
             ui.with_layout(
-                Layout::right_to_left().with_cross_align(eframe::emath::Align::Min),
+                Layout::right_to_left(eframe::emath::Align::Min)
+                    .with_cross_align(eframe::emath::Align::Min),
                 |ui| {
                     ui.add(Hyperlink::from_label_and_url("read more ⤴", &a.url));
                 },
@@ -179,27 +179,31 @@ impl Headlines {
         }
     }
 
+    #[allow(unused)]
     pub(crate) fn render_top_panel(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
         // define a TopBottomPanel widget
         TopBottomPanel::top("top_panel").show(ctx, |ui| {
             ui.add_space(10.);
             egui::menu::bar(ui, |ui| {
                 // logo
-                ui.with_layout(Layout::left_to_right(), |ui| {
+                ui.with_layout(Layout::left_to_right(eframe::emath::Align::Min), |ui| {
                     ui.add(Label::new(
                         RichText::new("📰").text_style(egui::TextStyle::Heading),
                     ));
                 });
                 // controls
-                ui.with_layout(Layout::right_to_left(), |ui| {
-                    if !cfg!(target_arch = "wasm32") {
+                ui.with_layout(Layout::right_to_left(eframe::emath::Align::Min), |ui| {
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
                         let close_btn = ui.add(Button::new(
                             RichText::new("❌").text_style(egui::TextStyle::Body),
                         ));
+
                         if close_btn.clicked() {
-                            frame.quit();
+                            frame.close();
                         }
                     }
+
                     let refresh_btn = ui.add(Button::new(
                         RichText::new("🔄").text_style(egui::TextStyle::Body),
                     ));
@@ -231,8 +235,7 @@ impl Headlines {
                     ));
 
                     if config_btn.clicked() {
-                        self.api_key_initialized = !self.api_key_initialized;
-                        self.articles.clear();
+                        self.toggle_config = !self.toggle_config;
                     }
 
                     // about button
@@ -257,20 +260,30 @@ impl Headlines {
 
     pub fn render_config(&mut self, ctx: &Context) {
         CentralPanel::default().show(ctx, |_| {
-            Window::new("App configuration").show(ctx, |ui| {
-                ui.label("Enter you API_KEY for newsapi.org");
-                let text_input = ui.text_edit_singleline(&mut self.config.api_key);
-                if text_input.lost_focus() && ui.input().key_pressed(egui::Key::Enter) {
-                    if let Some(tx) = &self.app_tx {
-                        tx.send(Msg::ApiKeySet(self.config.api_key.to_string()))
-                            .expect("Failed sending ApiKeySet event");
+            let Headlines {
+                toggle_config,
+                config,
+                app_tx,
+                api_key_initialized,
+                ..
+            } = self;
+            Window::new("App configuration")
+                .open(toggle_config)
+                .show(ctx, |ui| {
+                    ui.label("Enter you API_KEY for newsapi.org");
+                    let text_input = ui.text_edit_singleline(&mut config.api_key);
+                    if text_input.lost_focus() && ui.input().key_pressed(egui::Key::Enter) {
+                        if let Some(tx) = &app_tx {
+                            tx.send(Msg::ApiKeySet(config.api_key.to_string()))
+                                .expect("Failed sending ApiKeySet event");
+                        }
+                        *api_key_initialized = true;
+                        tracing::info!("API_KEY set");
+                        ui.close_menu();
                     }
-                    self.api_key_initialized = !self.api_key_initialized;
-                    tracing::info!("API_KEY set");
-                }
-                ui.label("Don't have the API_KEY? register at:");
-                ui.hyperlink("https://newsapi.org/register");
-            });
+                    ui.label("Don't have the API_KEY? register at:");
+                    ui.hyperlink("https://newsapi.org/register");
+                });
         });
     }
 
@@ -281,35 +294,35 @@ impl Headlines {
             ui.add(info);
         });
     }
-}
 
-pub(crate) fn render_footer(ctx: &Context) {
-    TopBottomPanel::bottom("footer").show(ctx, |ui| {
+    pub(crate) fn render_footer(&self, ctx: &Context) {
+        TopBottomPanel::bottom("footer").show(ctx, |ui| {
+            ui.vertical_centered(|ui| {
+                ui.add_space(10.);
+                ui.add(Label::new(
+                    RichText::new("API source: newsapi.org")
+                        .small()
+                        .text_style(TextStyle::Monospace),
+                ));
+                ui.add(Hyperlink::from_label_and_url(
+                    "Made with egui",
+                    "https://github.com/emilk/egui",
+                ));
+                ui.add(Hyperlink::from_label_and_url(
+                    "creativcoder/headlines",
+                    "https://github.com/creativcoder/headlines",
+                ));
+                ui.add_space(10.);
+            })
+        });
+    }
+
+    pub(crate) fn render_header(&self, ui: &mut Ui) {
         ui.vertical_centered(|ui| {
-            ui.add_space(10.);
-            ui.add(Label::new(
-                RichText::new("API source: newsapi.org")
-                    .small()
-                    .text_style(TextStyle::Monospace),
-            ));
-            ui.add(Hyperlink::from_label_and_url(
-                "Made with egui",
-                "https://github.com/emilk/egui",
-            ));
-            ui.add(Hyperlink::from_label_and_url(
-                "creativcoder/headlines",
-                "https://github.com/creativcoder/headlines",
-            ));
-            ui.add_space(10.);
-        })
-    });
-}
-
-pub(crate) fn render_header(ui: &mut Ui) {
-    ui.vertical_centered(|ui| {
-        ui.heading("headlines");
-    });
-    ui.add_space(PADDING);
-    let sep = Separator::default().spacing(20.);
-    ui.add(sep);
+            ui.heading("headlines");
+        });
+        ui.add_space(PADDING);
+        let sep = Separator::default().spacing(20.);
+        ui.add(sep);
+    }
 }
