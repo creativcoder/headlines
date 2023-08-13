@@ -25,7 +25,7 @@ impl App for Headlines {
             return;
         }
 
-        if self.toggle_config || !self.api_key_initialized {
+        if self.toggle_config {
             self.render_config(ctx);
         } else {
             self.preload_articles();
