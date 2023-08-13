@@ -47,7 +47,6 @@ impl Default for HeadlinesConfig {
 pub struct Headlines {
     pub articles: Vec<NewsCardData>,
     pub config: HeadlinesConfig,
-    pub api_key_initialized: bool,
     pub toggle_config: bool,
     pub toggle_about: bool,
     pub news_rx: Option<Receiver<NewsCardData>>,
@@ -64,7 +63,7 @@ impl Headlines {
     pub fn init(mut self, cc: &CreationContext) -> Self {
         if let Some(storage) = cc.storage {
             self.config = eframe::get_value(storage, APP_NAME).unwrap_or_default();
-            self.api_key_initialized = !self.config.api_key.is_empty();
+            self.toggle_config = self.config.api_key.is_empty();
         }
 
         let api_key = self.config.api_key.to_string();
@@ -73,7 +72,6 @@ impl Headlines {
         #[allow(unused_mut)]
         let (mut news_tx, news_rx) = channel();
         self.news_rx = Some(news_rx);
-        self.toggle_config = false;
 
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -264,11 +262,11 @@ impl Headlines {
                 toggle_config,
                 config,
                 app_tx,
-                api_key_initialized,
                 ..
             } = self;
+            let mut show_config = *toggle_config;
             Window::new("App configuration")
-                .open(toggle_config)
+                .open(&mut show_config)
                 .show(ctx, |ui| {
                     ui.label("Enter you API_KEY for newsapi.org");
                     let text_input = ui.text_edit_singleline(&mut config.api_key);
@@ -277,13 +275,14 @@ impl Headlines {
                             tx.send(Msg::ApiKeySet(config.api_key.to_string()))
                                 .expect("Failed sending ApiKeySet event");
                         }
-                        *api_key_initialized = true;
+                        *toggle_config = false;
                         tracing::info!("API_KEY set");
                         ui.close_menu();
                     }
                     ui.label("Don't have the API_KEY? register at:");
                     ui.hyperlink("https://newsapi.org/register");
                 });
+            *toggle_config &= show_config;
         });
     }
 
